@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-declare -r WRAPPER="fakechroot -- fakeroot"
+declare -r WRAPPER="unshare --map-root-user --map-auto"
 
 declare -r GROUP="$1"
 declare -r BUILDDIR="$2"
@@ -42,7 +42,7 @@ sed -i -e 's/^root::/root:!:/' "$BUILDDIR/etc/shadow"
 
 # fakeroot to map the gid/uid of the builder process to root
 # fixes #22
-fakeroot -- \
+$WRAPPER -- \
     tar \
         --numeric-owner \
         --xattrs \

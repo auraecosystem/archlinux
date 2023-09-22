@@ -4,6 +4,8 @@ OUTPUTDIR=$(shell pwd)/output
 
 .PHONY: clean
 clean:
+	echo "Fixup the ca-certs permissions prior to nuking"
+	chmod -R u+w $(BUILDDIR)/etc/ca-certificates/ || :
 	rm -rf $(BUILDDIR) $(OUTPUTDIR)
 
 $(OUTPUTDIR)/base.tar.zst:
