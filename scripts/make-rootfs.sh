@@ -40,11 +40,8 @@ $WRAPPER -- chroot "$BUILDDIR" /usr/bin/systemd-sysusers --root "/"
 # remove passwordless login for root (see CVE-2019-5021 for reference)
 sed -i -e 's/^root::/root:!:/' "$BUILDDIR/etc/shadow"
 
-# fakeroot to map the gid/uid of the builder process to root
-# fixes #22
 $WRAPPER -- \
     tar \
-        --numeric-owner \
         --xattrs \
         --acls \
         --exclude-from=exclude \
