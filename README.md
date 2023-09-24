@@ -56,10 +56,11 @@ Install the following Arch Linux packages:
 * make
 * devtools
 * podman
-* fakechroot
-* fakeroot
+* util-linux
 
-Make sure your user can directly interact with Podman (i.e. `podman info` works).
+Make sure your user can directly interact with Podman (i.e. `podman info` works)
+and can run `unshare` (either `kernel.unprivileged_userns_clone=1` is set or
+you're running as root).
 
 ### Usage
 Run `make image-base` to build the `archlinux:base` image with the `base` meta

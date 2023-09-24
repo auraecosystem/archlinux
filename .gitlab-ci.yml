@@ -61,10 +61,15 @@ get_version:
   parallel:
     matrix:
       - GROUP: [base, base-devel]
+  tags:
+    - vm
   before_script:
-    - pacman -Syu --noconfirm make fakechroot fakeroot
+    - pacman -Syu --noconfirm make
     - pacman -Sdd --noconfirm devtools
   script:
+    - echo $(id -n -u):100000:65536 > /etc/subuid
+    - echo $(id -n -g):100000:65536 > /etc/subgid
+    - sysctl kernel.unprivileged_userns_clone=1
     - make $PWD/output/Dockerfile.$GROUP
   artifacts:
     paths:
@@ -88,6 +93,7 @@ rootfs:secure:
   extends: .rootfs
   tags:
     - secure
+    - vm
     - docker
   only:
     - master@archlinux/archlinux-docker
