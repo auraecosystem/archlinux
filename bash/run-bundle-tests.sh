@@ -1,4 +1,6 @@
-# Set up and run tests of the 'bundle-uri' command in protocol v2
+#!/bin/sh
+#
+# Set up and run tests of the 'bundle-uri' command in protocol v2 on Arch Linux
 #
 # The test that includes this script should set BUNDLE_URI_PROTOCOL
 # to one of "file", "git", or "http".
@@ -6,6 +8,8 @@
 BUNDLE_URI_TEST_PARENT=
 BUNDLE_URI_TEST_URI=
 BUNDLE_URI_TEST_BUNDLE_URI=
+
+# Protocol and environment configuration
 case "$BUNDLE_URI_PROTOCOL" in
 file)
 	BUNDLE_URI_PARENT=file_parent
@@ -14,6 +18,9 @@ file)
 	test_set_prereq BUNDLE_URI_FILE
 	;;
 git)
+	if ! type git-daemon >/dev/null 2>&1; then
+		BUG "git-daemon not found. Ensure 'git' is fully installed on Arch Linux."
+	fi
 	. "$TEST_DIRECTORY"/lib-git-daemon.sh
 	start_git_daemon --export-all --enable=receive-pack
 	BUNDLE_URI_PARENT="$GIT_DAEMON_DOCUMENT_ROOT_PATH/parent"
@@ -22,11 +29,15 @@ git)
 	test_set_prereq BUNDLE_URI_GIT
 	;;
 http)
+	if [ ! -d /usr/lib/httpd/modules ] && [ ! -d /usr/apache2/modules ]; then
+		say "Warning: Apache modules path standard for Arch might require apache package."
+	fi
 	. "$TEST_DIRECTORY"/lib-httpd.sh
 	start_httpd
 	BUNDLE_URI_PARENT="$HTTPD_DOCUMENT_ROOT_PATH/http_parent"
 	BUNDLE_URI_REPO_URI="$HTTPD_URL/smart/http_parent"
-	BUNDLE_URI_BUNDLE_URI="$BUNDLE_URI_REPO_URL/fake.bdl"
+	# Corrected typo from BUNDLE_URI_REPO_URL to BUNDLE_URI_REPO_URI
+	BUNDLE_URI_BUNDLE_URI="$BUNDLE_URI_REPO_URI/fake.bdl"
 	test_set_prereq BUNDLE_URI_HTTP
 	;;
 *)
@@ -49,6 +60,7 @@ http)
 *)
 	;;
 esac
+
 BUNDLE_URI_BUNDLE_URI_ESCAPED=$(echo "$BUNDLE_URI_BUNDLE_URI" | test_uri_escape)
 
 test_expect_success "connect with $BUNDLE_URI_PROTOCOL:// using protocol v2: no bundle-uri" '
@@ -64,7 +76,6 @@ test_expect_success "connect with $BUNDLE_URI_PROTOCOL:// using protocol v2: no 
 
 	# Server responded using protocol v2
 	grep "< version 2" log &&
-
 	! grep bundle-uri log
 '
 
@@ -79,7 +90,6 @@ test_expect_success "connect with $BUNDLE_URI_PROTOCOL:// using protocol v2: hav
 
 	# Server responded using protocol v2
 	grep "< version 2" log &&
-
 	# Server advertised bundle-uri capability
 	grep "< bundle-uri" log
 '
@@ -94,13 +104,8 @@ test_expect_success "clone with $BUNDLE_URI_PROTOCOL:// using protocol v2: reque
 		clone "$BUNDLE_URI_REPO_URI" cloned \
 		>actual 2>err &&
 
-	# Server responded using protocol v2
 	grep "< version 2" log &&
-
-	# Server advertised bundle-uri capability
 	grep "< bundle-uri" log &&
-
-	# Client did not issue bundle-uri command
 	! grep "> command=bundle-uri" log &&
 
 	GIT_TRACE_PACKET="$PWD/log" \
@@ -110,13 +115,8 @@ test_expect_success "clone with $BUNDLE_URI_PROTOCOL:// using protocol v2: reque
 		clone "$BUNDLE_URI_REPO_URI" cloned2 \
 		>actual 2>err &&
 
-	# Server responded using protocol v2
 	grep "< version 2" log &&
-
-	# Server advertised bundle-uri capability
 	grep "< bundle-uri" log &&
-
-	# Client issued bundle-uri command
 	grep "> command=bundle-uri" log &&
 
 	GIT_TRACE_PACKET="$PWD/log3" \
@@ -127,19 +127,11 @@ test_expect_success "clone with $BUNDLE_URI_PROTOCOL:// using protocol v2: reque
 		"$BUNDLE_URI_REPO_URI" cloned3 \
 		>actual 2>err &&
 
-	# Server responded using protocol v2
 	grep "< version 2" log3 &&
-
-	# Server advertised bundle-uri capability
 	grep "< bundle-uri" log3 &&
-
-	# Client did not issue bundle-uri command (--bundle-uri override)
 	! grep "> command=bundle-uri" log3
 '
 
-# The remaining tests will all assume transfer.bundleURI=true
-#
-# This test can be removed when transfer.bundleURI is enabled by default.
 test_expect_success 'enable transfer.bundleURI for remaining tests' '
 	git config --global transfer.bundleURI true
 '
@@ -148,7 +140,6 @@ test_expect_success "test bundle-uri with $BUNDLE_URI_PROTOCOL:// using protocol
 	test_config -C "$BUNDLE_URI_PARENT" \
 		bundle.only.uri "$BUNDLE_URI_BUNDLE_URI_ESCAPED" &&
 
-	# All data about bundle URIs
 	cat >expect <<-EOF &&
 	[bundle]
 		version = 1
@@ -167,11 +158,8 @@ test_expect_success "test bundle-uri with $BUNDLE_URI_PROTOCOL:// using protocol
 test_expect_success "test bundle-uri with $BUNDLE_URI_PROTOCOL:// using protocol v2 and extra data" '
 	test_config -C "$BUNDLE_URI_PARENT" \
 		bundle.only.uri "$BUNDLE_URI_BUNDLE_URI_ESCAPED" &&
-
-	# Extra data should be ignored
 	test_config -C "$BUNDLE_URI_PARENT" bundle.only.extra bogus &&
 
-	# All data about bundle URIs
 	cat >expect <<-EOF &&
 	[bundle]
 		version = 1
@@ -195,7 +183,6 @@ test_expect_success "test bundle-uri with $BUNDLE_URI_PROTOCOL:// using protocol
 	test_config -C "$BUNDLE_URI_PARENT" \
 		bundle.bundle3.uri "$BUNDLE_URI_BUNDLE_URI_ESCAPED-3.bdl" &&
 
-	# All data about bundle URIs
 	cat >expect <<-EOF &&
 	[bundle]
 		version = 1
